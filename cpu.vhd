@@ -80,7 +80,8 @@ architecture behavioral of cpu is
    state_inc_val, state_inc_val2, state_inc_val3,
    state_dec_val, state_dec_val2, state_dec_val3,  -- odpovídá inc_val a dec_val
    state_po_inc, state_po_dec,   -- odpovídá po_inc a po_dec
-   state_while_s, state_while_p, -- odpovídá while_s a while_p
+   state_while_s, state_while_s2, state_while_s3, 
+   state_while_p, state_while_p2, state_while_p3,-- odpovídá while_s a while_p
    state_putchar, state_getchar, -- odpovídá putchar a getchar
    state_break, state_return,
    state_none
@@ -269,17 +270,32 @@ case pstate is
 			pc_dec <= '1';
 			nstate <= sfetch;
 	when state_while_s =>
-			pc_dec <= '1';
-			DATA_EN <= '1';
-			DATA_RDWR <= '0';
+			pc_dec <= '1';		-- PC <- PC + 1
+			DATA_EN <= '1';		
+			DATA_RDWR <= '0';	-- DATA_RDATA = ram[pointer]
 			nstate <= state_while_s2;
 	when state_while_s2 =>
-			if DATA_RDATA = (DATA_RDATA'range => '0') then
+			if DATA_RDATA = (DATA_RDATA'range => '0') then	-- if ram[pointer] == 0
 				cnt_inc <= '1';
-				CODE_EN <= '1';
+				CODE_EN <= '1';				-- povolí zápis 
 				nstate  <= state_while_s3;
 			else
 				nstate <= sfetch;
+ 			endif;
+	when state_while_s3 =>
+			if cnt_addr = (cnt_addr'range => '0'); then	-- CNT = 0
+				nstate <= sfetch;
+			else						-- while CNT != 0
+				if CODE_DATA = X"5B" then		-- if c == [ inkrementuj
+					cnt_inc <= '1';
+				elsif CODE_DATA = X"5D" then		-- if c == ] dekrementuj
+					cnt_dec <= '0';
+				endif;
+				
+				pc_dec <= '1';
+				nstate <= 'state_while_p';
+			endif;	
+	when state_while_p => 
 				
 				
 			
