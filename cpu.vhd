@@ -72,6 +72,7 @@ architecture behavioral of cpu is
 -- ----------------------------------------------------------------------------
 
  signal sel : std_logic_vector(1 downto 0); 
+ signal mux_data : std_logic_vector(7 downto 0);
 
  -- Stavy FSM
 -- ----------------------------------------------------------------------------
@@ -169,8 +170,8 @@ DATA_ADDR <= ptr_addr;
 mux: process(CLK, sel, RESET)
 begin
     if RESET = '1' then
-        DATA_WDATA <= (others => '0'); --THIS!!
-    else
+        DATA_WDATA <= (others => '0'); 
+    elsif CLK'event and CLK = '1' then
 	case sel is
 	  when "00" => DATA_WDATA <= IN_DATA;
 	  when "01" => DATA_WDATA <= DATA_RDATA - 1;
@@ -271,10 +272,14 @@ case pstate is
 			ptr_inc <= '1';
 			pc_inc <= '1';
 			nstate <= sfetch;
+
+    -----Instrukce:  <-----        
 	when state_po_dec =>
 			ptr_dec <= '1';
-			pc_dec <= '1';
+			pc_inc <= '1';
 			nstate <= sfetch;
+
+    -----Instrukce:  +-----           
 	when state_inc_val =>
 			DATA_EN <= '1';
 			DATA_WREN <= '0';
@@ -287,6 +292,8 @@ case pstate is
 			DATA_WREN <= '1';
 			pc_inc <= '1';
 			nstate <= sfetch;
+
+    -----Instrukce:  -------        
 	when state_dec_val =>
 			DATA_EN <= '1';
 			DATA_WREN <= '0';
@@ -297,10 +304,12 @@ case pstate is
 	when state_dec_val3 =>
 			DATA_EN <= '1';
 			DATA_WREN <= '1';
-			pc_dec <= '1';
+			pc_inc <= '1';
 			nstate <= sfetch;
+
+    -----Instrukce:  [-----        
 	when state_while_s =>
-			pc_dec <= '1';		-- PC <- PC + 1
+			pc_inc <= '1';		-- PC <- PC + 1
 			DATA_EN <= '1';		
 			DATA_WREN <= '0';	-- DATA_RDATA = ram[pointer]
 			nstate <= state_while_s2;
@@ -319,15 +328,17 @@ case pstate is
 				if CODE_DATA = X"5B" then		-- if c == [ inkrementuj
 					cnt_inc <= '1';
 				elsif CODE_DATA = X"5D" then		-- if c == ] dekrementuj
-					cnt_dec <= '0';
+					cnt_dec <= '1';
 				end if;
 				
-				pc_dec <= '1';
+				pc_inc <= '1';
 				nstate <= state_while_s_loop;
 			end if;
 	when state_while_s_loop =>			--TODO
 			CODE_EN <= '1';
 			nstate <= state_while_s3;	
+
+     -----Instrukce: ]-----       
 	when state_while_p => 
 			DATA_EN <= '1';
 			DATA_WREN <= '0';
@@ -362,6 +373,8 @@ case pstate is
 				pc_dec <= '1';
 			end if;
 			nstate <= state_while_p_loop;
+
+    -----Instrukce:  ,-----        
 	when state_getchar => 
 			IN_REQ <= '1';
 			sel <= "00";
@@ -375,6 +388,8 @@ case pstate is
 			else
 				nstate <= state_getchar;
 			end if;
+
+    -----Instrukce:  .-----        
 	when state_putchar =>
 			DATA_EN <= '1';
 			DATA_WREN <= '0';
@@ -390,6 +405,8 @@ case pstate is
 				OUT_DATA <= DATA_RDATA;
                 nstate <= sfetch;
 			end if;
+
+    -----Instrukce: tilda-----        
 	when state_break =>
 			cnt_inc <= '1';
  			pc_inc <= '1';
@@ -409,8 +426,12 @@ case pstate is
 				pc_inc <= '1';
 				nstate <= state_break2;
 			end if;
+
+    -----Instrukce:  null-----        
 	when state_return =>
 			nstate <= state_return;
+
+    -----Instrukce: else-----        
 	when state_none =>
 			pc_inc <= '1';
 			nstate <= sfetch;
