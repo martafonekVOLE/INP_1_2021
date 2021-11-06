@@ -72,37 +72,36 @@ architecture behavioral of cpu is
 -- ----------------------------------------------------------------------------
 
  signal sel : std_logic_vector(1 downto 0); 
- signal mux_data : std_logic_vector(7 downto 0);
 
  -- Stavy FSM
 -- ----------------------------------------------------------------------------
 
  type fsm_state is (
-   sidle, sfetch, sdecode, 						--výchozí, načítací a dekódovací state
-   state_inc_val, state_inc_val2, state_inc_val3,			-- odpovídá inc_val, značí +
-   state_dec_val, state_dec_val2, state_dec_val3,  			-- odpovídá dec_val, značí -
-   state_po_inc, state_po_dec,   					-- odpovídá po_inc a po_dec, značí > & <
-   state_while_s, state_while_s2, state_while_s3, state_while_s_loop,	-- odpovídá while_s a značí začátek cyklu
-   state_while_p, state_while_p2, state_while_p3, state_while_p_loop, state_while_p4, 	-- odpovídá while_p a značí konec cyklu
-   state_putchar, state_putchar2, state_getchar, state_getchar2, 	-- odpovídá putchar a getchar, značí . a ,
-   state_break, state_break2, state_break3, state_return,		-- značí tildu a null
-   state_none								-- značí ostatní stavy
+   sidle, sfetch, sdecode, 																-- výchozí, načítací a dekódovací state
+   state_inc_val, state_inc_val2, state_inc_val3,										-- odpovídá inc_val, značí +
+   state_dec_val, state_dec_val2, state_dec_val3,  										-- odpovídá dec_val, značí -
+   state_po_inc, state_po_dec,   														-- odpovídá po_inc a po_dec, značí > & <
+   state_while_s, state_while_s2, state_while_s3, state_while_s_loop,					-- odpovídá while_s a značí začátek cyklu
+   state_while_e, state_while_e2, state_while_e3, state_while_e_loop, state_while_e4, 	-- odpovídá while_e a značí konec cyklu
+   state_putchar, state_putchar2, state_getchar, state_getchar2, 						-- odpovídá putchar a getchar, značí . a ,
+   state_break, state_break2, state_break3, state_return,								-- značí tildu a null
+   state_none																			-- značí ostatní stavy
  );
- signal pstate : fsm_state := sidle;					-- aktuální stav
- signal nstate : fsm_state;						-- další stav
+ signal pstate : fsm_state := sidle;													-- aktuální stav
+ signal nstate : fsm_state;																-- další stav
 
  -- Instrukce
 -- ----------------------------------------------------------------------------
-
- type instruction_type is (
- inc_val, dec_val, -- inkrementace a dekrementace buňky (hodnoty)
- po_inc, po_dec,   -- inkrementace a dekrementace ukazatele
- while_s, while_p,
- putchar, getchar,
- break, ret,
- none
- );
- signal instruction : instruction_type;
+-- UNUSED!
+ --type instruction_type is (
+ --inc_val, dec_val, -- inkrementace a dekrementace buňky (hodnoty)
+ --po_inc, po_dec,   -- inkrementace a dekrementace ukazatele
+ --while_s, while_e,
+ --putchar, getchar,
+ --break, ret,
+ --none
+ --);
+ -- UNUSED!   signal instruction : instruction_type;
 
 
 begin
@@ -182,24 +181,25 @@ begin
     end if;
 end process;
 -- ----------------------------------------------------------------------------
---                                 Dekoder
+--                             Dekoder - UNUSED!
+--		   Nebyl použit z důvodu chyb výpisu a zbytečné implementaci
 -- ----------------------------------------------------------------------------
-decoder: process(DATA_RDATA)
-begin
-	case(DATA_RDATA) is
-	  when X"3E" => instruction <= inc_val; -- Instrukce:  >
-	  when X"3C" => instruction <= dec_val; -- Instrukce:  <
-	  when X"2B" => instruction <= po_inc;  -- Instrukce:  +
-	  when X"2D" => instruction <= po_dec;  -- Instrukce:  -
-	  when X"5B" => instruction <= while_s; -- Instrukce:  [
-	  when X"5D" => instruction <= while_p; -- Instrukce:  ]
-	  when X"2E" => instruction <= putchar;	-- Instrukce:  .
-	  when X"2C" => instruction <= getchar; -- Instrukce:  ,
-	  when X"7E" => instruction <= break;   -- Instrukce:  ~ (Brainlove thing)
-	  when X"00" => instruction <= ret;     -- Instrukce: null
-	  when others => instruction <= none;   -- Instrukce: none
-    end case;
-end process;
+--decoder: process(instruction, CLK, RESET)
+--begin
+	--case(DATA_RDATA) is
+	  --when X"3E" => instruction <= inc_val; -- Instrukce:  >
+	  --when X"3C" => instruction <= dec_val; -- Instrukce:  <
+	  --when X"2B" => instruction <= po_inc;  -- Instrukce:  +
+	  --when X"2D" => instruction <= po_dec;  -- Instrukce:  -
+	  --when X"5B" => instruction <= while_s; -- Instrukce:  [
+	  --when X"5D" => instruction <= while_e; -- Instrukce:  ]
+	  --when X"2E" => instruction <= putchar; -- Instrukce:  .
+	  --when X"2C" => instruction <= getchar; -- Instrukce:  ,
+	  --when X"7E" => instruction <= break;   -- Instrukce:  ~ (Brainlove thing)
+	  --when X"00" => instruction <= ret;     -- Instrukce: null
+	  --when others => instruction <= none;   -- Instrukce: none
+    --end case;
+--end process;
 -- ----------------------------------------------------------------------------
 --                             Aktualizace FSM
 -- ----------------------------------------------------------------------------
@@ -218,35 +218,51 @@ end process;
 -- ----------------------------------------------------------------------------
 nstate_fsm: process(pstate, OUT_BUSY, IN_VLD, CODE_DATA, cnt_addr, DATA_RDATA) --závislosti!!
 begin
-	-----Default-----
-	pc_inc  <= '0';
-	pc_dec  <= '0';
-	ptr_inc <= '0';
-	ptr_dec <= '0';
-	cnt_inc <= '0';
-	cnt_dec <= '0';
-    OUT_WREN <= '0';
-    IN_REQ <= '0';
-    CODE_EN <= '0';
-    sel <= "00";
-    DATA_WREN <= '0';
-    DATA_EN <= '0';
+-- --------------------------Defaultní nastavení-------------------------------
+		 pc_inc  	<= '0';
+		 pc_dec  	<= '0';
+		 ptr_inc 	<= '0';
+		 ptr_dec 	<= '0';
+		 cnt_inc 	<= '0';
+		 cnt_dec 	<= '0';
+		 OUT_WREN 	<= '0';
+		 IN_REQ  	<= '0';
+		 CODE_EN 	<= '0';
+		 sel 		<= "00";
+		 DATA_WREN 	<= '0';
+		 DATA_EN 	<= '0';
 
 case pstate is
-	-----SIDLE-----
+-- --------------------------SIDLE-------------------------------
 	when sidle =>  
             nstate <= sfetch;
-	-----SFETCH-----
+-- -------------------------SFETCH-------------------------------
 	when sfetch => 
             CODE_EN <= '1';
             nstate <= sdecode;
-	-----SDECODE-----
+-- -------------------------SDECODE------------------------------
     when sdecode =>
+		--! Nakonec nepoužito - zbytečné
+			--case instruction is
+				--when inc_val => nstate <= state_inc_val;
+				--when dec_val => nstate <= state_dec_val;
+				--when po_inc  => nstate <= state_po_inc;
+				--when po_dec  => nstate <= state_po_dec;
+				--when while_s => nstate <= state_while_s;
+				--when while_e => nstate <= state_while_e;
+				--when puthcar => nstate <= state_puthcar;
+				--when getchar => nstate <= state_getchar;
+				--when break   => nstate <= state_break;
+				--when return  => nstate <= state_return;
+				--when none    => nstate <= state_none;
+				--when others  => nstate <= state_none;
+			--end case;
+
 			case CODE_DATA is
 					when X"3E" =>
-						nstate <= state_po_inc; -- > - inkrementace hodnoty ukazatele
+						nstate <= state_po_inc;  -- > - inkrementace hodnoty ukazatele
 					when X"3C" =>
-						nstate <= state_po_dec; -- < - dekrementace hodnoty ukazatele
+						nstate <= state_po_dec;  -- < - dekrementace hodnoty ukazatele
 					when X"2B" =>
 						nstate <= state_inc_val; -- + - inkrementace hodnoty aktuální buňky
 					when X"2D" =>
@@ -254,60 +270,60 @@ case pstate is
 					when X"5B" =>
 						nstate <= state_while_s; -- [ - začátek cyklu while
 					when X"5D" =>
-						nstate <= state_while_p; -- ] - konec cyklu while
+						nstate <= state_while_e; -- ] - konec cyklu while
 					when X"2E" =>
 						nstate <= state_putchar; -- . - tisk hodnoty aktuální buňky
 					when X"2C" =>
 						nstate <= state_getchar; -- , - načtení hodnoty do aktuální buňky
 					when X"7E" =>
-						nstate <= state_break; -- ~ - ukončení prováděného cyklu while
+						nstate <= state_break; 	 -- ~ - ukončení prováděného cyklu while
 					when X"00" =>
-						nstate <= state_return; -- null - zastavení vykonávání programu
+						nstate <= state_return;  -- null - zastavení vykonávání programu
 					when others =>
 						nstate <= state_none;
 				end case;
 
-	-----Instrukce:  >-----
+-- -------------------------Instrukce: >------------------------------
 	when state_po_inc =>
-			ptr_inc <= '1';
-			pc_inc <= '1';
+			ptr_inc <= '1';		-- PTR <= PTR + 1
+			pc_inc <= '1';		-- PC <= PC + 1
 			nstate <= sfetch;
 
-    -----Instrukce:  <-----        
+-- -------------------------Instrukce: <------------------------------
 	when state_po_dec =>
-			ptr_dec <= '1';
-			pc_inc <= '1';
+			ptr_dec <= '1';		-- PTR <= PTR - 1
+			pc_inc <= '1';		-- PC <= PC + 1
 			nstate <= sfetch;
 
-    -----Instrukce:  +-----           
+-- -------------------------Instrukce: +------------------------------          
 	when state_inc_val =>
 			DATA_EN <= '1';
-			DATA_WREN <= '0';
+			DATA_WREN <= '0';	-- DATA RDATA <= ram[PTR]
 			nstate <= state_inc_val2; 
 	when state_inc_val2 =>
-			sel <= "10"; 		--Inkrementace
+			sel <= "10"; 		-- DATA_WDATA <= DATA_RDATA + 1
 			nstate <= state_inc_val3; 
 	when state_inc_val3 =>
 			DATA_EN <= '1';
-			DATA_WREN <= '1';
+			DATA_WREN <= '1';	-- zápis
 			pc_inc <= '1';
 			nstate <= sfetch;
 
-    -----Instrukce:  -------        
+-- -------------------------Instrukce: -------------------------------  
 	when state_dec_val =>
 			DATA_EN <= '1';
-			DATA_WREN <= '0';
+			DATA_WREN <= '0';	-- DATA RDATA <= ram[PTR]
 			nstate <= state_dec_val2;
 	when state_dec_val2 => 
-			sel <= "01"; 		--Dekrementace
+			sel <= "01"; 		-- DATA_WDATA <= DATA_RDATA - 1
 			nstate <= state_dec_val3;
 	when state_dec_val3 =>
 			DATA_EN <= '1';
-			DATA_WREN <= '1';
+			DATA_WREN <= '1';	-- zápis
 			pc_inc <= '1';
 			nstate <= sfetch;
 
-    -----Instrukce:  [-----        
+-- -------------------------Instrukce: [------------------------------      
 	when state_while_s =>
 			pc_inc <= '1';		-- PC <- PC + 1
 			DATA_EN <= '1';		
@@ -316,7 +332,7 @@ case pstate is
 	when state_while_s2 =>
 			if DATA_RDATA = (DATA_RDATA'range => '0') then	-- if ram[pointer] == 0
 				cnt_inc <= '1';
-				CODE_EN <= '1';				-- povolí zápis 
+				CODE_EN <= '1';				-- CODE_DATA <= RAM[PTR]
 				nstate  <= state_while_s3;
 			else
 				nstate <= sfetch;
@@ -334,53 +350,53 @@ case pstate is
 				pc_inc <= '1';
 				nstate <= state_while_s_loop;
 			end if;
-	when state_while_s_loop =>			--TODO
+	when state_while_s_loop =>			
 			CODE_EN <= '1';
 			nstate <= state_while_s3;	
 
-     -----Instrukce: ]-----       
-	when state_while_p => 
-			DATA_EN <= '1';
+-- -------------------------Instrukce: ]------------------------------   
+	when state_while_e => 
+			DATA_EN <= '1';		--DATA_RDATA <= ram[PTR]
 			DATA_WREN <= '0';
-			nstate <= state_while_p2;
-	when state_while_p2 =>
-			if DATA_RDATA = (DATA_RDATA'range => '0') then
+			nstate <= state_while_e2;
+	when state_while_e2 =>
+			if DATA_RDATA = (DATA_RDATA'range => '0') then		--if DATA_RDATA == 0, inkrementuj
 				pc_inc <= '1';
 				nstate <= sfetch;
 			else
-				cnt_inc <= '1';
+				cnt_inc <= '1';		--jinak dekrementuj a zvyš counter
 				pc_dec <= '1';
-				nstate <= state_while_p_loop;
+				nstate <= state_while_e_loop;
 			end if;
-	when state_while_p_loop => 
+	when state_while_e_loop => 
 			CODE_EN <= '1';
-			nstate <= state_while_p3;
-	when state_while_p3 =>
-			if cnt_addr = (cnt_addr'range => '0') then
+			nstate <= state_while_e3;
+	when state_while_e3 =>
+			if cnt_addr = (cnt_addr'range => '0') then		--if counter == 0 -> fetch
 				nstate <= sfetch;
 			else
-				if CODE_DATA = X"5D" then
+				if CODE_DATA = X"5D" then		-- if = ], inkrementuj
 					cnt_inc <= '1';
-				elsif CODE_DATA = X"5B" then
+				elsif CODE_DATA = X"5B" then		-- if = [, dekrementuj
 					cnt_dec <= '1';
 				end if;
-				nstate <= state_while_p4;
+				nstate <= state_while_e4;
             end if;
-	when state_while_p4 => 
-			if cnt_addr = (cnt_addr'range => '0') then
+	when state_while_e4 => 
+			if cnt_addr = (cnt_addr'range => '0') then		-- if CNT == 0, inkrementuj
 				pc_inc <= '1';
 			else
-				pc_dec <= '1';
+				pc_dec <= '1';		-- else dekrementuj
 			end if;
-			nstate <= state_while_p_loop;
+			nstate <= state_while_e_loop;
 
-    -----Instrukce:  ,-----        
+-- -------------------------Instrukce: ,------------------------------    
 	when state_getchar => 
 			IN_REQ <= '1';
-			sel <= "00";
+			sel <= "00";		--DATA_WDATA <= IN_DATA
 			nstate <= state_getchar2;
 	when state_getchar2 =>
-			if IN_VLD = '1' then
+			if IN_VLD = '1' then	--RAM[PTR] <= DATA_WDATA
 				DATA_EN <= '1';
 				DATA_WREN <= '1';
 				pc_inc <= '1';
@@ -389,24 +405,24 @@ case pstate is
 				nstate <= state_getchar;
 			end if;
 
-    -----Instrukce:  .-----        
+-- -------------------------Instrukce: .------------------------------    
 	when state_putchar =>
 			DATA_EN <= '1';
 			DATA_WREN <= '0';
 			nstate <= state_putchar2;
 	when state_putchar2 =>
 			if OUT_BUSY = '1' then
-				DATA_EN <= '1';
-                DATA_WREN <= '0';
-                nstate <= state_putchar2;
+				DATA_EN <= '1';		--DATA_RDATA <= RAM[PTR]
+                		DATA_WREN <= '0';
+               			nstate <= state_putchar2;
 			else
-				OUT_WREN <= '1';
+				OUT_WREN <= '1';	--OUT_DATA <= DATA_RDATA
 				pc_inc <= '1';
 				OUT_DATA <= DATA_RDATA;
                 nstate <= sfetch;
 			end if;
 
-    -----Instrukce: tilda-----        
+-- -------------------------Instrukce: ~------------------------------         
 	when state_break =>
 			cnt_inc <= '1';
  			pc_inc <= '1';
@@ -417,7 +433,7 @@ case pstate is
 	when state_break3 =>
 			if cnt_addr = (cnt_addr'range => '0') then
 				nstate <= sfetch;
-			else
+			else					--Pokud se != 0, tak kontroluj jestli nejde '[', nebo ']'
 				if CODE_DATA = X"5B" then
 					cnt_inc <= '1';
 				elsif CODE_DATA = X"5D" then 
@@ -427,14 +443,15 @@ case pstate is
 				nstate <= state_break2;
 			end if;
 
-    -----Instrukce:  null-----        
+-- -------------------------Instrukce: null------------------------------  
 	when state_return =>
 			nstate <= state_return;
 
-    -----Instrukce: else-----        
+-- -------------------------Instrukce: none------------------------------ 
 	when state_none =>
 			pc_inc <= '1';
 			nstate <= sfetch;
+-- -------------------------Else------------------------------ 			
 	when others => null;
 end case;
 end process;			
