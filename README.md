@@ -1,4 +1,5 @@
 # INP_1_2021
+21/23 bodů
 INP první projekt, 2021
 - [x]  vypis ABCDEFGHIJKL
 - [x]  vypis inp-proj2021
